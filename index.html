@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2027 事奉崗位即時報名</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --warn: #d97706;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding-bottom: 80px;
+    }
+    /* 頂部常駐控制列 */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 100; background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 12px 16px;
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .app-title { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; display: flex; align-items: center; gap: 6px; }
+    .live-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    
+    .member-select-box { display: flex; gap: 8px; align-items: center; }
+    select {
+      width: 100%; padding: 10px 12px; font-size: 16px; font-weight: 600;
+      border: 2px solid var(--primary); border-radius: 10px; background: var(--primary-light); color: var(--primary);
+    }
+
+    /* 個人進度條 */
+    .status-bar {
+      display: flex; justify-content: space-between; gap: 8px; margin-top: 10px;
+      padding: 8px 12px; border-radius: 8px; background: #f1f5f9; font-size: 13px; font-weight: 600;
+    }
+    .badge-ok { color: var(--success); }
+    .badge-warn { color: var(--danger); }
+
+    /* 分頁切換 */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: #fff; padding: 0 16px; }
+    .tab-btn {
+      flex: 1; padding: 12px 0; text-align: center; font-size: 14px; font-weight: 600;
+      color: var(--muted); border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer;
+    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* 主內容區 */
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 16px; }
+    .section-header {
+      font-size: 15px; font-weight: 700; margin: 18px 0 10px; padding-left: 8px;
+      border-left: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: center;
+    }
+    .section-sub { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+    /* 崗位卡片 */
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .card-desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.4; }
+
+    /* 坑位項目 */
+    .slot-item {
+      border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px;
+      margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+      transition: all 0.15s; background: #fff;
+    }
+    .slot-item:last-child { margin-bottom: 0; }
+    .slot-item.mine { border-color: var(--primary); background: var(--primary-light); }
+    .slot-item.full { background: #f8fafc; opacity: 0.75; }
+
+    .slot-info { flex: 1; padding-right: 8px; }
+    .slot-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .slot-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    
+    .person-tag {
+      font-size: 12px; padding: 2px 8px; border-radius: 99px; font-weight: 600;
+      background: #e2e8f0; color: #334155;
+    }
+    .person-tag.yyds { background: #dbeafe; color: #1e40af; }
+    .person-tag.tp { background: #fef3c7; color: #92400e; }
+    .person-tag.me { background: var(--primary); color: #fff; }
+    .empty-hint { font-size: 12px; color: #94a3b8; }
+
+    /* 按鈕 */
+    .action-btn {
+      padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      border: none; cursor: pointer; white-space: nowrap; min-width: 74px;
+    }
+    .btn-join { background: var(--primary); color: #fff; }
+    .btn-cancel { background: var(--danger-bg); color: var(--danger); }
+    .btn-full { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 全體名單總覽 */
+    .member-row {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px; margin-bottom: 8px;
+    }
+    .member-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .member-name { font-weight: 700; font-size: 15px; }
+    .cell-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+    .cell-yyds { background: #dbeafe; color: #1e40af; }
+    .cell-tp { background: #fef3c7; color: #92400e; }
+    .status-pill { font-size: 12px; padding: 2px 8px; border-radius: 99px; font-weight: 700; }
+    .pill-done { background: var(--success-bg); color: var(--success); }
+    .pill-todo { background: var(--danger-bg); color: var(--danger); }
+    .member-jobs { font-size: 13px; color: #475569; line-height: 1.5; }
+
+    /* 提示訊息 Toast */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 10px 18px; border-radius: 99px;
+      font-size: 13px; font-weight: 600; z-index: 999; display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 90%; text-align: center;
+    }
+    .lock-banner {
+      background: var(--danger); color: #fff; text-align: center;
+      padding: 8px; font-size: 13px; font-weight: 700; display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="lockBanner" class="lock-banner">🔒 報名表目前已由組長鎖定，僅供檢視</div>
+
+<div class="sticky-header">
+  <div class="header-top">
+    <h1 class="app-title"><span class="live-dot"></span> 2027 事奉崗位報名</h1>
+    <button onclick="adminLock()" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;font-size:11px;color:#64748b;">組長鎖定</button>
+  </div>
+  
+  <div class="member-select-box">
+    <select id="memberSelect" onchange="onSelectMember()">
+      <option value="">👇 請先點此選擇你的名字...</option>
+    </select>
+  </div>
+
+  <div class="status-bar" id="myStatusBar" style="display:none;">
+    <span id="fixedStatus">固定崗位: 0/1</span>
+    <span id="eventStatus">聚會崗位: 0/2</span>
+    <span id="totalStatus">總計: 0/3</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('slots', this)">📋 搶位模式 (按崗位)</button>
+  <button class="tab-btn" onclick="switchTab('roster', this)">👥 全體陣容 (26人進度)</button>
+</div>
+
+<div class="container">
+  <div id="tab-slots">
+    <div style="text-align:center;padding:40px 0;color:#64748b;" id="loadingMsg">載入最新報名數據中...</div>
+    <div id="slotsContainer"></div>
+  </div>
+  <div id="tab-roster" style="display:none;"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ⚠️ 請將下方網址替換成你部署 Google Apps Script 後取得的 Web App URL
+const API_URL = 'https://script.google.com/macros/s/AKfycbwZn6B8EhYnYKhON_hVheznxjFOXgjpsPMG5qbmY0P0snNwIZh6FD3mVe6nLDfTE29x_g/exec';
+
+// 2027 崗位結構完整定義 (對應 Excel C~S 欄與各 Cell 限制)
+const ROLE_GROUPS = [
+  // === 固定崗位 (每人限選 1 個) ===
+  {
+    category: 'fixed', colKey: '財政', title: '財政 x1',
+    desc: '十一奉獻者優先，管理財政（收Cell費、處理Claim錢）',
+    slots: [
+      { id: 'fin_1', title: '財政 (全隊 1 名)', sheetValue: 'V', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '點名', title: '點名 (每Cell 1個)',
+    desc: '每周崇拜點名（僅限報自己所屬 Cell 名額）',
+    slots: [
+      { id: 'roll_yyds', title: '點名 (YYDS)', sheetValue: 'V', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'roll_tp', title: '點名 (突破)', sheetValue: 'V', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '聯絡', title: '聯絡 (對外x1 / 對內每Cell x1)',
+    desc: '對外需已洗禮，與大堂/牧者聯絡；對內負責組內上傳下達',
+    slots: [
+      { id: 'con_ext', title: '對外聯絡 (需洗禮 · 全隊1名)', sheetValue: 'V 對外', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'con_yyds', title: '對內聯絡 (YYDS)', sheetValue: 'V 對內', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'con_tp', title: '對內聯絡 (突破)', sheetValue: 'V 對內', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '生日小組', title: '生日小組 x2',
+    desc: '發送生日祝福訊息、籌備每季生日會',
+    slots: [
+      { id: 'bday_1', title: '生日小組 (全隊 2 名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '康樂小組', title: '康樂小組 x2',
+    desc: '不定期籌備非主日康樂活動',
+    slots: [
+      { id: 'rec_1', title: '康樂小組 (全隊 2 名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '宣傳小組', title: '宣傳小組 x2',
+    desc: '設計宣傳物料、打理社交平台帳戶',
+    slots: [
+      { id: 'promo_1', title: '宣傳小組 (全隊 2 名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '佈道小組', title: '佈道小組 x2',
+    desc: '推動隊工佈道事工',
+    slots: [
+      { id: 'evan_1', title: '佈道小組 (全隊 2 名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '資料小組', title: '資料小組 x3 (每Cell 1個 + 隊工 1個)',
+    desc: '資料庫雲端整理、按Checklist檢查聚會資料、提醒Host交資料',
+    slots: [
+      { id: 'data_team', title: '資料小組 - 隊工負責 (全隊1名)', sheetValue: 'V 隊工', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'data_yyds', title: '資料小組 - YYDS負責', sheetValue: 'V Cell', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'data_tp', title: '資料小組 - 突破負責', sheetValue: 'V Cell', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '成長小組', title: '成長小組 x4 (每Cell 2個)',
+    desc: '籌備栽培課、跟進組員立志、推動信仰成長階梯',
+    slots: [
+      { id: 'grow_yyds', title: '成長小組 (YYDS · 2名)', sheetValue: 'V', capacity: 2, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'grow_tp', title: '成長小組 (突破 · 2名)', sheetValue: 'V', capacity: 2, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+  {
+    category: 'fixed', colKey: '關懷小組', title: '關懷小組 x4 (每Cell 2個)',
+    desc: '關顧組員狀況、個別及群體代禱',
+    slots: [
+      { id: 'care_yyds', title: '關懷小組 (YYDS · 2名)', sheetValue: 'V', capacity: 2, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'care_tp', title: '關懷小組 (突破 · 2名)', sheetValue: 'V', capacity: 2, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+
+  // === 聚會崗位 (每人需選 2 個) ===
+  {
+    category: 'event', colKey: '宣教餐', title: '宣教餐 x4 (可選月份: 3, 5, 8, 12)',
+    desc: '每季宣教餐籌備與服事（每月限 1 人）',
+    slots: [
+      { id: 'mis_3', title: '3月 宣教餐', sheetValue: 'V 3月', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'mis_5', title: '5月 宣教餐', sheetValue: 'V 5月', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'mis_8', title: '8月 宣教餐', sheetValue: 'V 8月', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'mis_12', title: '12月 宣教餐', sheetValue: 'V 12月', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '廣東話班', title: '秋季廣東話班 x8',
+    desc: '分項分工：行政1、聯絡1、語文教學2、語文應用2、文化課2',
+    slots: [
+      { id: 'can_admin', title: '行政 (1名)', sheetValue: 'V 行政', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'can_con', title: '聯絡 / 報名 (1名)', sheetValue: 'V 聯絡(報名)', capacity: 1, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'can_teach', title: '語文課 - 教學 (2名)', sheetValue: 'V 語文課-教學', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'can_app', title: '語文課 - 應用 (2名)', sheetValue: 'V 語文課-應用', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' },
+      { id: 'can_cul', title: '文化課 (2名)', sheetValue: 'V 文化課', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '延伸活動', title: '廣東話班延伸活動 x3',
+    desc: '籌備廣東話班學員延伸聯誼活動',
+    slots: [
+      { id: 'can_ext', title: '廣東話班延伸活動 (3名)', sheetValue: 'V', capacity: 3, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '開Cell', title: '開Cell x18 (每Cell 9個)',
+    desc: '1月需2人，2至8月每月1人（系統只開放你所屬 Cell 的名額）',
+    slots: [
+      // YYDS 開Cell
+      { id: 'oc_y_1', title: 'YYDS 開Cell - 1月 (2名)', sheetValue: 'V 1月', capacity: 2, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_2', title: 'YYDS 開Cell - 2月', sheetValue: 'V 2月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_3', title: 'YYDS 開Cell - 3月', sheetValue: 'V 3月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_4', title: 'YYDS 開Cell - 4月', sheetValue: 'V 4月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_5', title: 'YYDS 開Cell - 5月', sheetValue: 'V 5月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_6', title: 'YYDS 開Cell - 6月', sheetValue: 'V 6月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_7', title: 'YYDS 開Cell - 7月', sheetValue: 'V 7月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      { id: 'oc_y_8', title: 'YYDS 開Cell - 8月', sheetValue: 'V 8月', capacity: 1, cellFilter: 'YYDS', cellScope: 'SAME_CELL' },
+      // 突破 開Cell
+      { id: 'oc_t_1', title: '突破 開Cell - 1月 (2名)', sheetValue: 'V 1月', capacity: 2, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_2', title: '突破 開Cell - 2月', sheetValue: 'V 2月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_3', title: '突破 開Cell - 3月', sheetValue: 'V 3月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_4', title: '突破 開Cell - 4月', sheetValue: 'V 4月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_5', title: '突破 開Cell - 5月', sheetValue: 'V 5月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_6', title: '突破 開Cell - 6月', sheetValue: 'V 6月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_7', title: '突破 開Cell - 7月', sheetValue: 'V 7月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' },
+      { id: 'oc_t_8', title: '突破 開Cell - 8月', sheetValue: 'V 8月', capacity: 1, cellFilter: '突破', cellScope: 'SAME_CELL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '復活節', title: '3月復活節活動 x2',
+    desc: '與提摩太合辦',
+    slots: [
+      { id: 'easter_1', title: '3月復活節活動 (2名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '生活營', title: '4月生活營 x2',
+    desc: '4月生活營籌備',
+    slots: [
+      { id: 'camp_1', title: '4月生活營 (2名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  },
+  {
+    category: 'event', colKey: '聖誕party', title: '12月聖誕party x2',
+    desc: '與提摩太合辦',
+    slots: [
+      { id: 'xmas_1', title: '12月聖誕party (2名)', sheetValue: 'V', capacity: 2, cellFilter: 'ALL', cellScope: 'ALL' }
+    ]
+  }
+];
+
+let boardState = { isLocked: false, members: [], selections: [] };
+let currentMemberName = localStorage.getItem('selected_member_2027') || '';
+let isSubmitting = false;
+
+// 初始化載入並設定每 3 秒自動背景更新
+async function init() {
+  await fetchState();
+  setInterval(() => {
+    if (!isSubmitting) fetchState();
+  }, 3000);
+}
+
+async function fetchState() {
+  if (API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL') {
+    document.getElementById('loadingMsg').innerHTML = '⚠️ 請先在 HTML 程式碼中填入你的 Google Apps Script API 網址';
+    return;
+  }
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    boardState = data;
+    populateMemberDropdown();
+    renderAll();
+  } catch (e) {
+    console.error('同步失敗', e);
+  }
+}
+
+function populateMemberDropdown() {
+  const select = document.getElementById('memberSelect');
+  if (select.options.length > 1) return; // 已建立過
+
+  const yydsGroup = document.createElement('optgroup');
+  yydsGroup.label = 'YYDS (13人)';
+  const tpGroup = document.createElement('optgroup');
+  tpGroup.label = '突破 (13人)';
+
+  boardState.members.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = `${m.name} (${m.cell})`;
+    if (m.cell === 'YYDS') yydsGroup.appendChild(opt);
+    else tpGroup.appendChild(opt);
+  });
+
+  select.appendChild(yydsGroup);
+  select.appendChild(tpGroup);
+  if (currentMemberName) select.value = currentMemberName;
+}
+
+function onSelectMember() {
+  currentMemberName = document.getElementById('memberSelect').value;
+  localStorage.setItem('selected_member_2027', currentMemberName);
+  renderAll();
+}
+
+function renderAll() {
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('lockBanner').style.display = boardState.isLocked ? 'block' : 'none';
+
+  const me = boardState.members.find(m => m.name === currentMemberName);
+  const mySelections = boardState.selections.filter(s => s.member === currentMemberName);
+  const myFixedCount = mySelections.filter(s => s.isFixed).length;
+  const myEventCount = mySelections.filter(s => !s.isFixed).length;
+
+  // 更新頂部個人狀態列
+  const statusBar = document.getElementById('myStatusBar');
+  if (me) {
+    statusBar.style.display = 'flex';
+    document.getElementById('fixedStatus').innerHTML = `固定崗位: <span class="${myFixedCount === 1 ? 'badge-ok' : 'badge-warn'}">${myFixedCount}/1 ${myFixedCount === 1 ? '✅' : ''}</span>`;
+    document.getElementById('eventStatus').innerHTML = `聚會崗位: <span class="${myEventCount === 2 ? 'badge-ok' : 'badge-warn'}">${myEventCount}/2 ${myEventCount === 2 ? '✅' : ''}</span>`;
+    const total = myFixedCount + myEventCount;
+    document.getElementById('totalStatus').innerHTML = `總計: <span class="${total === 3 ? 'badge-ok' : 'badge-warn'}">${total}/3</span>`;
+  } else {
+    statusBar.style.display = 'none';
+  }
+
+  renderSlotsView(me, myFixedCount, myEventCount);
+  renderRosterView();
+}
+
+function renderSlotsView(me, myFixedCount, myEventCount) {
+  const container = document.getElementById('slotsContainer');
+  let html = '';
+
+  let currentCat = '';
+  ROLE_GROUPS.forEach(group => {
+    if (group.category !== currentCat) {
+      currentCat = group.category;
+      html += currentCat === 'fixed'
+        ? `<div class="section-header">📌 固定崗位 <span class="section-sub">每人必選 1 個 (全隊共25名額)</span></div>`
+        : `<div class="section-header">🎉 聚會崗位 <span class="section-sub">每人必選 2 個 (全隊共39名額)</span></div>`;
+    }
+
+    html += `<div class="card"><div class="card-title">${group.title}</div><div class="card-desc">${group.desc}</div>`;
+
+    group.slots.forEach(slot => {
+      // 找出此坑位已報名的組員
+      const takers = boardState.selections.filter(s => {
+        if (s.colKey !== group.colKey || s.sheetValue !== slot.sheetValue) return false;
+        if (slot.cellFilter !== 'ALL' && s.cell !== slot.cellFilter) return false;
+        return true;
+      });
+
+      const isMine = me && takers.some(t => t.member === me.name);
+      const isFull = takers.length >= slot.capacity;
+      const wrongCell = me && slot.cellFilter !== 'ALL' && me.cell !== slot.cellFilter;
+
+      // 決定按鈕狀態
+      let btnHtml = '';
+      if (boardState.isLocked) {
+        btnHtml = `<button class="action-btn btn-full" disabled>已鎖定</button>`;
+      } else if (!me) {
+        btnHtml = `<button class="action-btn btn-full" disabled>先選名字</button>`;
+      } else if (isMine) {
+        btnHtml = `<button class="action-btn btn-cancel" onclick="toggleSlot('${group.colKey}', '${slot.sheetValue}', ${slot.capacity}, '${slot.cellScope}', '${slot.title}')">取消</button>`;
+      } else if (wrongCell) {
+        btnHtml = `<button class="action-btn btn-full" disabled>限${slot.cellFilter}</button>`;
+      } else if (isFull) {
+        btnHtml = `<button class="action-btn btn-full" disabled>已滿</button>`;
+      } else if (group.category === 'fixed' && myFixedCount >= 1) {
+        btnHtml = `<button class="action-btn btn-full" disabled>固定已選</button>`;
+      } else if (group.category === 'event' && myEventCount >= 2) {
+        btnHtml = `<button class="action-btn btn-full" disabled>聚會已滿2</button>`;
+      } else {
+        btnHtml = `<button class="action-btn btn-join" onclick="toggleSlot('${group.colKey}', '${slot.sheetValue}', ${slot.capacity}, '${slot.cellScope}', '${slot.title}')">搶位</button>`;
+      }
+
+      // 產生已報名人名標籤
+      let tagsHtml = '';
+      if (takers.length === 0) {
+        tagsHtml = `<span class="empty-hint">尚餘 ${slot.capacity} 個空位</span>`;
+      } else {
+        takers.forEach(t => {
+          const cls = t.member === currentMemberName ? 'me' : (t.cell === 'YYDS' ? 'yyds' : 'tp');
+          tagsHtml += `<span class="person-tag ${cls}">${t.member}</span>`;
+        });
+        if (!isFull) {
+          tagsHtml += `<span class="empty-hint" style="margin-left:4px;">(尚餘 ${slot.capacity - takers.length} 位)</span>`;
+        }
+      }
+
+      html += `
+        <div class="slot-item ${isMine ? 'mine' : ''} ${isFull && !isMine ? 'full' : ''}">
+          <div class="slot-info">
+            <div class="slot-name">${slot.title}</div>
+            <div class="slot-tags">${tagsHtml}</div>
+          </div>
+          ${btnHtml}
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function renderRosterView() {
+  const container = document.getElementById('tab-roster');
+  let doneCount = 0;
+  let html = '';
+
+  boardState.members.forEach(m => {
+    const subs = boardState.selections.filter(s => s.member === m.name);
+    const fixed = subs.filter(s => s.isFixed);
+    const events = subs.filter(s => !s.isFixed);
+    const isComplete = (fixed.length === 1 && events.length === 2);
+    if (isComplete) doneCount++;
+
+    const jobLabels = subs.map(s => {
+      const detail = s.sheetValue === 'V' ? '' : `(${s.sheetValue.replace('V ', '')})`;
+      return `<strong>${s.colKey}${detail}</strong>`;
+    });
+
+    html += `
+      <div class="member-row">
+        <div class="member-row-top">
+          <div>
+            <span class="member-name">${m.name}</span>
+            <span class="cell-badge ${m.cell === 'YYDS' ? 'cell-yyds' : 'cell-tp'}">${m.cell}</span>
+          </div>
+          <span class="status-pill ${isComplete ? 'pill-done' : 'pill-todo'}">
+            ${isComplete ? '✅ 已完成 (1+2)' : `固定 ${fixed.length}/1 · 聚會 ${events.length}/2`}
+          </span>
+        </div>
+        <div class="member-jobs">
+          ${jobLabels.length > 0 ? jobLabels.join('、 ') : '<span style="color:#94a3b8;">尚未報名任何崗位</span>'}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = `
+    <div class="section-header">全體完成進度 <span class="section-sub">已達標：${doneCount} / ${boardState.members.length} 人</span></div>
+    ${html}
+  `;
+}
+
+async function toggleSlot(colKey, sheetValue, capacity, cellScope, slotTitle) {
+  if (!currentMemberName || isSubmitting) return;
+  isSubmitting = true;
+  showToast('⏳ 處理中...');
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'toggle',
+        memberName: currentMemberName,
+        colKey: colKey,
+        sheetValue: sheetValue,
+        capacity: capacity,
+        cellScope: cellScope,
+        slotTitle: slotTitle
+      })
+    });
+    const result = await res.json();
+    if (result.state) boardState = result.state;
+    renderAll();
+
+    if (result.status === 'ok') {
+      showToast('✅ 已更新並同步至 Google Sheet');
+    } else {
+      showToast('⚠️ ' + result.message);
+    }
+  } catch (e) {
+    showToast('❌ 網絡錯誤，請重試');
+  } finally {
+    isSubmitting = false;
+  }
+}
+
+async function adminLock() {
+  const pwd = prompt('請輸入組長解鎖/鎖定密碼（預設 2027）：');
+  if (pwd !== '2027') {
+    if (pwd !== null) alert('密碼錯誤');
+    return;
+  }
+  isSubmitting = true;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'toggleLock' })
+    });
+    const result = await res.json();
+    if (result.state) boardState = result.state;
+    renderAll();
+    showToast(boardState.isLocked ? '🔒 已鎖定全表' : '🔓 已開放報名');
+  } finally {
+    isSubmitting = false;
+  }
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-slots').style.display = tab === 'slots' ? 'block' : 'none';
+  document.getElementById('tab-roster').style.display = tab === 'roster' ? 'block' : 'none';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+init();
+</script>
+</body>
+</html>
