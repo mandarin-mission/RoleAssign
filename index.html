@@ -157,7 +157,7 @@
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('slots', this)">📋 搶位模式 (按崗位)</button>
+  <button class="tab-btn active" onclick="switchTab('slots', this)">📋 報名模式 (按崗位)</button>
   <button class="tab-btn" onclick="switchTab('roster', this)">👥 全體陣容 (26人進度)</button>
 </div>
 
@@ -457,7 +457,7 @@ function renderSlotsView(me, myFixedCount, myEventCount) {
       } else if (group.category === 'event' && myEventCount >= 2) {
         btnHtml = `<button class="action-btn btn-full" disabled>聚會已滿2</button>`;
       } else {
-        btnHtml = `<button class="action-btn btn-join" onclick="toggleSlot('${group.colKey}', '${slot.sheetValue}', ${slot.capacity}, '${slot.cellScope}', '${slot.title}')">搶位</button>`;
+        btnHtml = `<button class="action-btn btn-join" onclick="toggleSlot('${group.colKey}', '${slot.sheetValue}', ${slot.capacity}, '${slot.cellScope}', '${slot.title}')">報名</button>`;
       }
 
       // 產生已報名人名標籤
@@ -567,7 +567,7 @@ async function toggleSlot(colKey, sheetValue, capacity, cellScope, slotTitle) {
 }
 
 async function adminLock() {
-  const pwd = prompt('請輸入組長解鎖/鎖定密碼（預設 2027）：');
+  const pwd = prompt('請輸入組長解鎖/鎖定密碼：');
   if (pwd !== '2027') {
     if (pwd !== null) alert('密碼錯誤');
     return;
